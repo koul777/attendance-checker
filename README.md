@@ -33,6 +33,8 @@ python scripts\create_release_package.py
 
 생성된 `release/MyAttendance.zip`을 GitHub Release 첨부 파일로 업로드하세요. `dist/`와 `release/`는 빌드 산출물이므로 저장소 커밋 대상에서 제외합니다.
 
+패키징 설정에서는 사내 백신/EDR 오탐 가능성을 줄이기 위해 UPX 압축을 사용하지 않습니다.
+
 ## 개발자용 빠른 시작
 
 Windows에서 가장 간단히 실행하려면 다음 순서로 진행합니다.
@@ -52,6 +54,25 @@ python -m venv .venv
 pip install -r requirements.txt
 python app.py
 ```
+
+## 로컬 보안 동작
+
+이 도구는 사내 사용자 PC에서 로컬로 실행하는 용도입니다. `python app.py`로 실행하면 Flask 서버는 `127.0.0.1`에만 바인딩되고, 브라우저는 `http://localhost:<포트>`로 열립니다. 같은 사내망의 다른 PC에서 `http://실행PC_IP:<포트>`로 접근하는 요청은 거부됩니다.
+
+웹 화면은 앱 실행 시마다 생성되는 로컬 요청 토큰을 사용합니다. 일반 사용자는 별도 조작이 필요 없지만, 화면 밖에서 `POST /upload` 또는 `POST /download`를 직접 호출하면 `X-Local-Token` 헤더가 없거나 값이 맞지 않을 때 `403`으로 거부됩니다.
+
+업로드 파일은 기본 10MB까지 허용합니다. 필요하면 실행 전에 `ATTENDANCE_MAX_UPLOAD_MB` 환경 변수로 조정할 수 있습니다.
+
+```powershell
+$env:ATTENDANCE_MAX_UPLOAD_MB = "20"
+python app.py
+```
+
+업로드는 확장자가 `.xlsx`인지 먼저 확인한 뒤, 실제 ZIP 기반 `.xlsx` 구조인지 검사합니다. 내부 항목 수가 500개를 넘거나, 압축 해제 총량이 50MB를 넘거나, 내부 경로에 절대경로 또는 `..` 이동이 있으면 거부합니다. 업로드 원본 파일명은 저장 경로에 사용하지 않습니다.
+
+앱이 만든 임시 폴더는 정상 종료 시 삭제되고, 다운로드용 결과 엑셀은 응답 생성 후 삭제됩니다. 분석 실패나 다운로드 실패 시 브라우저에는 일반 오류 메시지만 표시하고, 상세 예외는 로컬 로그에만 남깁니다.
+
+`templates/`와 `static/`에는 외부 CDN 리소스를 두지 않습니다. Bootstrap과 아이콘 CDN 대신 `static/style.css`의 로컬 스타일만 사용하므로, 실행 중 브라우저가 외부 CDN에 접속하지 않습니다.
 
 ## 샘플 데이터
 
@@ -216,17 +237,19 @@ git status --short
 ```powershell
 python -m compileall app.py analyzer.py scripts
 python scripts\attendance_harness.py
+if (rg -n '0\.0\.0\.0' app.py) { exit 1 } else { 'No 0.0.0.0 binding in app.py' }
+if (rg -n 'https?://|cdn|jsdelivr|bootstrap' templates static) { exit 1 } else { 'No external CDN references in templates/static' }
 ```
 
-`scripts/attendance_harness.py`는 `sample_data/public_attendance_sample_expected.json`과 내부 합성 케이스를 기준으로 판정 로직을 확인합니다.
+`scripts/attendance_harness.py`는 `sample_data/public_attendance_sample_expected.json`과 내부 합성 케이스를 기준으로 판정 로직을 확인합니다. `app.py`에 `0.0.0.0` 바인딩이 남아 있거나 `templates/`, `static/`에 외부 CDN URL이 남아 있으면 수정해야 합니다.
 
 ## 프로젝트 구조
 
 ```text
 app.py                         Flask 진입점, 업로드/분석/다운로드 처리
 analyzer.py                    엑셀 파싱, 시간 변환, 이상치 판정, 표시 엑셀 생성
-templates/index.html           업로드 및 결과 화면
-static/style.css               사용자 정의 스타일
+templates/index.html           업로드 및 결과 화면, 로컬 요청 토큰 헤더 처리
+static/style.css               사용자 정의 스타일과 CDN 대체용 최소 로컬 스타일
 rules/                         판정 기준 문서
 scripts/attendance_harness.py  판정 규칙 검증 하네스
 scripts/create_public_sample.py 공개용 가상 데이터 생성

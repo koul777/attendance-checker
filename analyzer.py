@@ -671,7 +671,7 @@ def decide_row(ws, row_idx, header):
 
 
 def analyze_file(file_path):
-    wb = load_workbook(file_path, data_only=True)
+    wb = load_workbook(file_path, read_only=True, data_only=True, keep_links=False)
     try:
         anomalies, summary, employees, sheet_names = process_workbook(wb, apply_marks=False)
     finally:
@@ -686,7 +686,7 @@ def analyze_file(file_path):
 
 
 def generate_marked_workbook(input_path, output_path):
-    wb = load_workbook(input_path)
+    wb = load_workbook(input_path, keep_links=False)
     try:
         process_workbook(wb, apply_marks=True)
         wb.save(output_path)
