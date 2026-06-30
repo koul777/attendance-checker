@@ -1,0 +1,15 @@
+{
+  "sample_file": "public_attendance_sample.xlsx",
+  "sheet": "공개샘플",
+  "note": "Excel row numbers include the header row.",
+  "expected_summary": {
+    "total_checked": 15,
+    "total_skipped": 1,
+    "total_anomalies": 5,
+    "pending_count": 0,
+    "review_count": 1
+  },
+  "expected_anomaly_rows": [3, 4, 11, 14, 15],
+  "expected_pending_rows": [],
+  "expected_review_rows": [13]
+}

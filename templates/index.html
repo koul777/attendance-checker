@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>복무관리 검증기</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="container-fluid app-shell">
+            <div class="header-row">
+                <div>
+                    <div class="app-kicker">AKS Attendance Review</div>
+                    <h1>복무관리 검증기</h1>
+                </div>
+                <div class="header-status">
+                    <span class="status-dot"></span>
+                    로컬 분석 · {{ app_version }}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container-fluid app-shell">
+        <section id="upload-section" class="workspace">
+            <div class="section-heading">
+                <div>
+                    <h2>엑셀 업로드</h2>
+                    <p>ERP 출퇴근관리에서 내려받은 `.xlsx` 파일을 선택하세요.</p>
+                </div>
+                <div class="rule-chips" aria-label="적용 규칙">
+                    <span>복무규정</span>
+                    <span>유연근무제</span>
+                    <span>임금피크제</span>
+                </div>
+            </div>
+
+            <div id="drop-zone" class="drop-zone">
+                <div class="upload-visual" aria-hidden="true">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                </div>
+                <div class="upload-copy">
+                    <h3>파일을 끌어오거나 선택하세요</h3>
+                    <p>지원 형식: `.xlsx`</p>
+                </div>
+                <input type="file" id="file-input" accept=".xlsx" class="d-none">
+                <button class="btn btn-primary action-button" type="button" onclick="document.getElementById('file-input').click()">
+                    <i class="bi bi-folder2-open"></i>
+                    파일 선택
+                </button>
+            </div>
+        </section>
+
+        <section id="loading-section" class="workspace loading-state d-none">
+            <div class="spinner-border" role="status"></div>
+            <h2>분석 중</h2>
+        </section>
+
+        <section id="result-section" class="d-none">
+            <div class="section-heading result-heading">
+                <div>
+                    <h2>검증 결과</h2>
+                    <p id="result-meta">업로드 파일 분석 결과입니다.</p>
+                </div>
+                <div class="result-actions">
+                    <button class="btn btn-outline-secondary" type="button" onclick="resetUpload()">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                        다시 분석
+                    </button>
+                    <button class="btn btn-success" type="button" onclick="downloadReport()">
+                        <i class="bi bi-download"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <span>검사 대상</span>
+                    <strong id="total-checked">0</strong>
+                </div>
+                <div class="metric-card danger">
+                    <span>이상치</span>
+                    <strong id="total-anomalies">0</strong>
+                </div>
+                <div class="metric-card warning">
+                    <span>보류</span>
+                    <strong id="pending-count">0</strong>
+                </div>
+                <div class="metric-card neutral">
+                    <span>검토</span>
+                    <strong id="review-count">0</strong>
+                </div>
+            </div>
+
+            <div class="result-panel">
+                <div class="toolbar">
+                    <div class="toolbar-title">
+                        <i class="bi bi-list-check"></i>
+                        대상 목록
+                    </div>
+                    <div class="filters">
+                        <select id="filter-employee" class="form-select form-select-sm">
+                            <option value="">전체 직원</option>
+                        </select>
+                        <select id="filter-type" class="form-select form-select-sm">
+                            <option value="">전체 유형</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table result-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>행</th>
+                                <th>일자</th>
+                                <th>소속</th>
+                                <th>교직원</th>
+                                <th>근무유형</th>
+                                <th>기준시간</th>
+                                <th>출근</th>
+                                <th>퇴근</th>
+                                <th>유형</th>
+                                <th>근무상황</th>
+                                <th>사유</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div id="no-results" class="empty-state d-none">
+                    <i class="bi bi-check2-circle"></i>
+                    <h3>표시할 대상이 없습니다</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="error-section" class="workspace error-state d-none">
+            <i class="bi bi-exclamation-octagon"></i>
+            <h2>분석 실패</h2>
+            <p id="error-message"></p>
+            <button class="btn btn-primary" type="button" onclick="resetUpload()">다시 시도</button>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <span>Attendance Checker</span>
+    </footer>
+
+    <script>
+        let currentData = null;
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        dropZone.addEventListener('click', (e) => {
+            if (!e.target.closest('button')) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadFile(fileInput.files[0]);
+            }
+        });
+
+        function uploadFile(file) {
+            if (!file.name.match(/\.xlsx$/i)) {
+                showError('엑셀 파일(.xlsx)만 업로드 가능합니다.');
+                return;
+            }
+
+            showSection('loading');
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+                    currentData = data;
+                    displayResults(data, file.name);
+                })
+                .catch(err => {
+                    showError('서버 연결에 실패했습니다: ' + err.message);
+                });
+        }
+
+        function displayResults(data, fileName) {
+            showSection('result');
+            const summary = data.summary || {};
+
+            document.getElementById('total-checked').textContent = summary.total_checked || 0;
+            document.getElementById('total-anomalies').textContent = summary.total_anomalies || 0;
+            document.getElementById('pending-count').textContent = summary.pending_count || 0;
+            document.getElementById('review-count').textContent = summary.review_count || 0;
+            document.getElementById('result-meta').textContent = `${fileName} · 기준일 ${summary.as_of_date || '-'}`;
+
+            const empSelect = document.getElementById('filter-employee');
+            empSelect.innerHTML = '<option value="">전체 직원</option>';
+            (data.employees || []).forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp;
+                opt.textContent = emp;
+                empSelect.appendChild(opt);
+            });
+
+            const typeSelect = document.getElementById('filter-type');
+            const types = [...new Set((data.anomalies || []).map(a => a.anomaly_type).filter(Boolean))].sort();
+            typeSelect.innerHTML = '<option value="">전체 유형</option>';
+            types.forEach(type => {
+                const opt = document.createElement('option');
+                opt.value = type;
+                opt.textContent = type;
+                typeSelect.appendChild(opt);
+            });
+
+            renderTable(data.anomalies || []);
+        }
+
+        function renderTable(anomalies) {
+            const tbody = document.getElementById('result-tbody');
+            const noResults = document.getElementById('no-results');
+            const empFilter = document.getElementById('filter-employee').value;
+            const typeFilter = document.getElementById('filter-type').value;
+
+            let filtered = anomalies;
+            if (empFilter) filtered = filtered.filter(a => a.name === empFilter);
+            if (typeFilter) filtered = filtered.filter(a => a.anomaly_type === typeFilter);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                noResults.classList.remove('d-none');
+                return;
+            }
+
+            noResults.classList.add('d-none');
+            tbody.innerHTML = filtered.map(a => {
+                const category = a.category || 'anomaly';
+                const memo = memoText(a);
+                return `<tr class="${rowClass(category)}" title="${escapeHtml(memo)}" data-memo="${escapeHtml(memo)}">
+                    <td class="row-number">${escapeHtml(a.row || a.no || '')}</td>
+                    <td>${escapeHtml(a.date || '')}<span class="weekday">${escapeHtml(a.weekday || '')}</span></td>
+                    <td>${escapeHtml(a.dept || '-')}</td>
+                    <td><strong>${escapeHtml(a.name || '-')}</strong></td>
+                    <td>${escapeHtml(a.work_shape || a.work_type || '-')}</td>
+                    <td>${escapeHtml(a.adjusted_schedule || a.scheduled || '-')}</td>
+                    <td>${escapeHtml(a.checkin || '-')}</td>
+                    <td>${escapeHtml(a.checkout || '-')}</td>
+                    <td><span class="type-pill ${category}">${escapeHtml(a.anomaly_type || '-')}</span></td>
+                    <td class="status-cell">${escapeHtml(a.work_status || '-')}</td>
+                    <td class="reason-cell">${escapeHtml(a.anomaly_detail || '-')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function memoText(item) {
+            const parts = [
+                `검증결과: ${item.anomaly_type || '-'}`,
+                `검증사유: ${item.anomaly_detail || '-'}`,
+            ];
+            if (item.work_status) parts.push(`근무상황: ${item.work_status}`);
+            return parts.join('\n');
+        }
+
+        function rowClass(category) {
+            return {
+                anomaly: 'row-anomaly',
+                pending: 'row-pending',
+                review: 'row-review',
+            }[category] || '';
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        document.getElementById('filter-employee').addEventListener('change', () => {
+            if (currentData) renderTable(currentData.anomalies || []);
+        });
+        document.getElementById('filter-type').addEventListener('change', () => {
+            if (currentData) renderTable(currentData.anomalies || []);
+        });
+
+        function downloadReport() {
+            if (!currentData) {
+                alert('다운로드할 데이터가 없습니다.');
+                return;
+            }
+
+            fetch('/download', { method: 'POST' })
+                .then(res => {
+                    if (!res.ok) throw new Error('다운로드 요청이 실패했습니다.');
+                    return res.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '복무관리_검증결과.xlsx';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                })
+                .catch(err => alert('다운로드 실패: ' + err.message));
+        }
+
+        function showSection(name) {
+            ['upload', 'loading', 'result', 'error'].forEach(section => {
+                document.getElementById(section + '-section').classList.toggle('d-none', section !== name);
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            showSection('error');
+        }
+
+        function resetUpload() {
+            currentData = null;
+            fileInput.value = '';
+            document.getElementById('result-tbody').innerHTML = '';
+            showSection('upload');
+        }
+    </script>
+</body>
+</html>
