@@ -71,4 +71,4 @@
 
 ## 기대 결과
 
-샘플별 기대 이상치, 보류, 검토 행 번호와 규정 원문 파일 목록은 `rules/attendance_harness.json`에 저장합니다.
+공개 샘플의 기대 이상치, 보류, 검토 행 번호는 `sample_data/public_attendance_sample_expected.json`에 저장합니다. 기관별 마스킹 샘플의 기대값은 공개 저장소에 넣지 말고 하네스 합성 케이스 또는 로컬 전용 설정 파일로 관리합니다.

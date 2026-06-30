@@ -31,7 +31,8 @@ Thumbs.db
 *.xlsx
 *.xlsm
 !sample_data/
-!sample_data/*.xlsx
+!sample_data/public_attendance_sample.xlsx
+~$*.xls*
 
 private_data/
 local_data/

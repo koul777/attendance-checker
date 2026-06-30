@@ -16,13 +16,8 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-DEFAULT_CONFIG = ROOT / "rules" / "attendance_harness.json"
-DEFAULT_SAMPLE_DIR = (
-    Path.home()
-    / "Desktop"
-    / "6월 29일"
-    / "복무관리"
-)
+DEFAULT_CONFIG = ROOT / "sample_data" / "public_attendance_sample_expected.json"
+DEFAULT_SAMPLE_DIR = ROOT / "sample_data"
 
 COL_DATE = "근태일"
 COL_WEEKDAY = "요일"
@@ -290,7 +285,7 @@ def normalized_clock_out(clock_in, clock_out, next_day):
     return clock_out
 
 
-def analyze_sheet(path, as_of_date):
+def analyze_sample(path, as_of_date):
     import analyzer as analyzer_module
 
     analyzer_module.AS_OF_DATE = as_of_date
@@ -316,6 +311,11 @@ def analyze_sheet(path, as_of_date):
                 category=item["category"],
             )
         )
+    return rows, result.get("summary", {})
+
+
+def analyze_sheet(path, as_of_date):
+    rows, _ = analyze_sample(path, as_of_date)
     return rows
 
 
@@ -364,6 +364,18 @@ def compare_rows(label, expected, actual):
     return False, messages
 
 
+def compare_summary(expected, actual):
+    if not expected:
+        return True, []
+
+    messages = []
+    for key, expected_value in expected.items():
+        actual_value = actual.get(key)
+        if actual_value != expected_value:
+            messages.append(f"요약 {key}: 기대={expected_value}, 결과={actual_value}")
+    return not messages, messages
+
+
 def config_value(config, korean_key, english_key=None, default=None):
     if korean_key in config:
         return config[korean_key]
@@ -378,6 +390,22 @@ def sample_value(sample, korean_key, english_key=None, default=None):
     if english_key and english_key in sample:
         return sample[english_key]
     return default
+
+
+def sample_file_name(sample):
+    return (
+        sample_value(sample, "파일", "file")
+        or sample_value(sample, "샘플_파일", "sample_file")
+    )
+
+
+def config_samples(config):
+    samples = config_value(config, "샘플목록", "samples", [])
+    if samples:
+        return samples
+    if sample_file_name(config):
+        return [config]
+    return []
 
 
 def check_regulation_documents(config, sample_dir):
@@ -740,7 +768,7 @@ def run(config_path, sample_dir_override=None):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
     sample_dir = Path(sample_dir_override or config_value(config, "샘플_폴더", "sample_dir") or DEFAULT_SAMPLE_DIR)
     as_of_date = config_value(config, "기준일", "as_of_date") or date.today().isoformat()
-    samples = config_value(config, "샘플목록", "samples", [])
+    samples = config_samples(config)
     all_ok = True
 
     print(f"설정 파일: {config_path}")
@@ -754,7 +782,7 @@ def run(config_path, sample_dir_override=None):
         all_ok = False
 
     for sample in samples:
-        file_name = sample_value(sample, "파일", "file")
+        file_name = sample_file_name(sample)
         path = sample_dir / file_name
         print(f"\n## {file_name}")
         if not path.exists():
@@ -762,12 +790,13 @@ def run(config_path, sample_dir_override=None):
             all_ok = False
             continue
 
-        results = analyze_sheet(path, as_of_date)
+        results, summary = analyze_sample(path, as_of_date)
         actual_anomalies = row_set(results, "anomaly")
         actual_pending = row_set(results, "pending")
         actual_review = row_set(results, "review")
 
         checks = [
+            compare_summary(sample_value(sample, "기대_요약", "expected_summary", {}), summary),
             compare_rows("이상치", sample_value(sample, "기대_이상치_행", "expected_anomaly_rows", []), actual_anomalies),
             compare_rows("보류", sample_value(sample, "기대_보류_행", "expected_pending_rows", []), actual_pending),
             compare_rows("검토", sample_value(sample, "기대_검토_행", "expected_review_rows", []), actual_review),
