@@ -17,6 +17,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from analyzer import analyze_file, generate_marked_workbook
 
 
+APP_NAME = '근태 점검 지원 프로그램(My Attendace)'
 APP_VERSION = '2026-06-29-samples-1-6'
 DEFAULT_PORT = 5000
 DEFAULT_MAX_UPLOAD_MB = 10
@@ -119,12 +120,17 @@ def handle_file_too_large(_exc):
 
 @app.route('/')
 def index():
-    return render_template('index.html', app_version=APP_VERSION, local_token=LOCAL_TOKEN)
+    return render_template(
+        'index.html',
+        app_name=APP_NAME,
+        app_version=APP_VERSION,
+        local_token=LOCAL_TOKEN,
+    )
 
 
 @app.route('/health')
 def health():
-    return jsonify({'ok': True, 'app_version': APP_VERSION})
+    return jsonify({'ok': True, 'app_name': APP_NAME, 'app_version': APP_VERSION})
 
 
 @app.route('/upload', methods=['POST'])

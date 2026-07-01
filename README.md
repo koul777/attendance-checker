@@ -1,6 +1,6 @@
-# Attendance Checker
+# 근태 점검 지원 프로그램(My Attendace)
 
-엑셀로 내려받은 복무/근태 자료에서 지참, 조퇴, 출퇴근 누락, 비근무일 출퇴근 기록 같은 검토 대상을 찾는 로컬 Flask 도구입니다. 파일은 서버에 업로드하지 않고 실행 중인 PC의 임시 폴더에서만 분석합니다.
+`근태 점검 지원 프로그램(My Attendace)`는 엑셀로 내려받은 복무/근태 자료에서 지참, 조퇴, 출퇴근 누락, 비근무일 출퇴근 기록 같은 검토 대상을 찾는 로컬 실행형 도구입니다. 파일은 외부 서버에 업로드하지 않고 실행 중인 PC의 임시 폴더에서만 분석합니다.
 
 ## 주요 기능
 
@@ -10,34 +10,39 @@
 - 이상 행에 검증결과와 검증사유를 표시한 엑셀 다운로드
 - 공개 테스트용 가상 근태 데이터 제공
 
-## 비개발자용 다운로드
+## 사용자용 실행 파일
 
-비개발자에게 배포할 때는 GitHub 저장소의 소스코드를 직접 받게 하기보다 GitHub Releases에 `MyAttendance.zip` 같은 실행파일 패키지를 올리는 방식을 권장합니다.
+비개발자에게 배포할 때는 GitHub 저장소의 소스코드를 직접 받게 하기보다 GitHub Releases에 `근태 점검 지원 프로그램(My Attendace).zip` 같은 실행파일 패키지를 올리는 방식을 권장합니다.
 
 사용자는 다음 순서로 실행합니다.
 
-1. GitHub Releases에서 최신 `MyAttendance.zip`을 다운로드합니다.
+1. GitHub Releases에서 최신 `근태 점검 지원 프로그램(My Attendace).zip`을 다운로드합니다.
 2. 압축을 풉니다.
-3. `MyAttendance.exe`를 실행합니다.
+3. `근태 점검 지원 프로그램(My Attendace).exe`를 실행합니다.
 4. 브라우저가 열리면 엑셀 파일을 업로드해 검증합니다.
 5. 결과 화면에서 `Export`를 눌러 검증결과가 표시된 엑셀을 내려받습니다.
 
 Windows 보안 경고가 뜨면 게시자가 등록되지 않은 개인 배포 실행파일이기 때문입니다. 조직 내부 배포용으로 쓸 경우 코드 서명 인증서를 적용하면 경고를 줄일 수 있습니다.
 
-릴리스 패키지는 로컬에서 다음 명령으로 만들 수 있습니다.
+릴리스 패키지는 로컬에서 다음 명령으로 만듭니다.
 
 ```powershell
 pyinstaller AttendanceChecker.spec
 python scripts\create_release_package.py
 ```
 
-생성된 `release/MyAttendance.zip`을 GitHub Release 첨부 파일로 업로드하세요. `dist/`와 `release/`는 빌드 산출물이므로 저장소 커밋 대상에서 제외합니다.
+빌드 결과는 다음 위치에 생성됩니다.
+
+- 실행 파일: `dist/근태 점검 지원 프로그램(My Attendace).exe`
+- 배포 패키지: `release/근태 점검 지원 프로그램(My Attendace).zip`
+
+배포 패키지에는 실행 파일, 공개 테스트용 샘플 엑셀, `사용방법.txt`가 포함됩니다. 생성된 `.zip` 파일을 GitHub Release 첨부 파일로 업로드하세요. `dist/`와 `release/`는 빌드 산출물이므로 저장소 커밋 대상에서 제외합니다.
 
 패키징 설정에서는 사내 백신/EDR 오탐 가능성을 줄이기 위해 UPX 압축을 사용하지 않습니다.
 
 ## 개발자용 빠른 시작
 
-Windows에서 가장 간단히 실행하려면 다음 순서로 진행합니다.
+Windows에서 가장 간단히 개발 서버를 실행하려면 다음 순서로 진행합니다.
 
 ```bat
 setup.bat
@@ -45,6 +50,8 @@ python app.py
 ```
 
 브라우저에서 `http://localhost:5000`을 열고 `sample_data/public_attendance_sample.xlsx`를 업로드하면 바로 동작을 확인할 수 있습니다. `python app.py` 실행 시 기본 포트는 `5000`이며, 다른 포트를 쓰려면 `PORT` 환경 변수를 지정합니다.
+
+빌드된 실행 파일이 있으면 `근태검사.bat`로 `dist/근태 점검 지원 프로그램(My Attendace).exe`를 실행할 수 있습니다. 실행 파일이 없을 때는 자동으로 `python app.py` 개발 서버를 실행합니다.
 
 가상환경을 직접 쓰는 경우:
 
@@ -253,6 +260,9 @@ static/style.css               사용자 정의 스타일과 CDN 대체용 최�
 rules/                         판정 기준 문서
 scripts/attendance_harness.py  판정 규칙 검증 하네스
 scripts/create_public_sample.py 공개용 가상 데이터 생성
+scripts/create_release_package.py 릴리스 zip 패키지 생성
 sample_data/                   공개 테스트용 가상 데이터와 기대값
 AttendanceChecker.spec         PyInstaller 패키징 설정
+setup.bat                      실행 의존성 설치
+근태검사.bat                   빌드된 실행 파일 또는 개발 서버 실행
 ```

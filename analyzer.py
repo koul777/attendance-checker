@@ -819,8 +819,8 @@ def mark_row(ws, row_idx, decision, result_col, reason_col):
 
     result_cell = ws.cell(row_idx, result_col, decision.anomaly_type)
     reason_cell = ws.cell(row_idx, reason_col, reason)
-    result_cell.comment = Comment(memo, '복무관리 검증기')
-    reason_cell.comment = Comment(memo, '복무관리 검증기')
+    result_cell.comment = Comment(memo, '근태 점검 지원 프로그램(My Attendace)')
+    reason_cell.comment = Comment(memo, '근태 점검 지원 프로그램(My Attendace)')
 
     for col_idx in range(1, reason_col + 1):
         ws.cell(row=row_idx, column=col_idx).fill = YELLOW_FILL

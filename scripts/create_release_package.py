@@ -3,14 +3,17 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXE_PATH = ROOT / "dist" / "MyAttendance.exe"
+APP_NAME = "근태 점검 지원 프로그램(My Attendace)"
+EXE_NAME = f"{APP_NAME}.exe"
+ZIP_NAME = f"{APP_NAME}.zip"
+EXE_PATH = ROOT / "dist" / EXE_NAME
 SAMPLE_PATH = ROOT / "sample_data" / "public_attendance_sample.xlsx"
 RELEASE_DIR = ROOT / "release"
-ZIP_PATH = RELEASE_DIR / "MyAttendance.zip"
+ZIP_PATH = RELEASE_DIR / ZIP_NAME
 
-USER_GUIDE = """근태 이상치 검출 시스템 사용방법
+USER_GUIDE = f"""{APP_NAME} 사용방법
 
-1. MyAttendance.exe를 실행합니다.
+1. {EXE_NAME}를 실행합니다.
 2. 브라우저가 자동으로 열리면 근태 엑셀(.xlsx)을 업로드합니다.
 3. 검증 결과를 확인합니다.
 4. Export 버튼을 눌러 검증결과가 표시된 엑셀을 내려받습니다.
@@ -32,7 +35,7 @@ def main():
 
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(ZIP_PATH, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.write(EXE_PATH, "MyAttendance.exe")
+        archive.write(EXE_PATH, EXE_NAME)
         if SAMPLE_PATH.exists():
             archive.write(SAMPLE_PATH, "public_attendance_sample.xlsx")
         archive.writestr("사용방법.txt", USER_GUIDE)

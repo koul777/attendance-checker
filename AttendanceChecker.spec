@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='MyAttendance',
+    name='근태 점검 지원 프로그램(My Attendace)',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
