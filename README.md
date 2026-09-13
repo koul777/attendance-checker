@@ -2,6 +2,40 @@
 
 엑셀로 내려받은 복무/근태 자료에서 지참, 조퇴, 출퇴근 누락, 비근무일 출퇴근 기록 같은 검토 대상을 찾는 로컬 Flask 도구입니다. 파일은 서버에 업로드하지 않고 실행 중인 PC의 임시 폴더에서만 분석합니다.
 
+## 25초 시연
+
+![복무관리 검증기 25초 시연 GIF](./docs/assets/demo/attendance-checker-demo.gif)
+
+[1920×1080 MP4 원본 영상 보기](./docs/assets/demo/attendance-checker-demo.mp4)
+
+## 사용 방법
+
+먼저 비개발자는 `MyAttendance.exe`를, 개발자는 `python app.py`를 실행합니다. 브라우저가 자동으로 열리지 않으면 `http://localhost:5000`에 접속하세요.
+
+### 1. 근태 엑셀 업로드
+
+`파일 선택`을 눌러 ERP에서 내려받은 `.xlsx` 파일을 선택합니다. 기능을 먼저 시험하려면 저장소의 `sample_data/public_attendance_sample.xlsx`를 사용하세요.
+
+![파일 선택 및 업로드](docs/assets/usage/01-upload.png)
+
+### 2. 검증 결과 요약 확인
+
+분석이 끝나면 검사 대상, 이상치, 보류, 검토 건수를 먼저 확인합니다. 아래 대상 목록에는 확인이 필요한 행과 판정 사유가 표시됩니다.
+
+![검증 결과 요약](docs/assets/usage/02-summary.png)
+
+### 3. 직원·이상 유형으로 필터링
+
+`전체 직원` 또는 `전체 유형` 필터를 사용해 필요한 기록만 좁혀 확인합니다.
+
+![직원 및 이상 유형 필터](docs/assets/usage/03-filter.png)
+
+### 4. 검증 결과 엑셀 저장
+
+`Export`를 누르면 원본 데이터에 `검증결과`와 `검증사유`가 표시된 `복무관리_검증결과.xlsx`가 저장됩니다.
+
+![검증 결과 엑셀 내보내기](docs/assets/usage/04-export.png)
+
 ## 주요 기능
 
 - `.xlsx` 근태 파일 업로드 및 웹 화면 분석
